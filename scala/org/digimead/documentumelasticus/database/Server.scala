@@ -56,19 +56,19 @@ class Server(val databases: Properties,
              val trace: Boolean = false,
              val silent: Boolean = true,
              val port: Int = 9002) extends Runnable {
-  private val logger : Logger = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass)
   val hsqlServer = new HSQLServer()
   init()
   def init() = {
     if (this.databases == null || this.databases.size() == 0) {
-      logger.error("HSQLDB Server is configured, but no databases are found")
-      logger.error("HSQLDB Server not started.")
+      log.error("HSQLDB Server is configured, but no databases are found")
+      log.error("HSQLDB Server not started.")
       throw new RuntimeException("HSQLDB Server is configured, but no databases are found")
     }
     this.hsqlServer.setSilent(this.silent)
     this.hsqlServer.setTrace(this.trace)
     this.hsqlServer.setPort(this.port)
-    logger.debug("configure HSQLDB with port: " + hsqlServer.getPort() +
+    log.debug("configure HSQLDB with port: " + hsqlServer.getPort() +
                  ", silent: " + hsqlServer.isSilent() +
                  ", trace: " + hsqlServer.isTrace())
     val i = this.databases.entrySet().iterator()
@@ -77,7 +77,7 @@ class Server(val databases: Properties,
       val current = i.next()
       val name = current.getKey().toString()
       val dbCfgPath = current.getValue().toString()
-      logger.debug("configuring database " + name + " with path " + dbCfgPath)
+      log.debug("configuring database " + name + " with path " + dbCfgPath)
       var dbPath = dbCfgPath
       if (dbPath.startsWith("file:")) {
         dbPath = dbPath.substring(5)
@@ -96,19 +96,19 @@ class Server(val databases: Properties,
       } catch {
         case e: IOException => throw new RuntimeException("could not get database directory \"" + dbPath + "\"", e)
       }
-      logger.debug("database path for " + name + " is \"" + hsqlServer.getDatabasePath(index, true) + "\", index " + index)
+      log.debug("database path for " + name + " is \"" + hsqlServer.getDatabasePath(index, true) + "\", index " + index)
       index += 1
     }
   }
   def halt(): Unit = {
-    logger.debug("Shutting down HSQLDB")
+    log.debug("Shutting down HSQLDB")
     // A newer version of hsqldb or SAP NetWeaver may not need the next line
     // DatabaseManager.closeDatabases(Database.CLOSEMODE_COMPACT)
     this.hsqlServer.stop()
-    logger.debug("Shutting down HSQLDB: Done");
+    log.debug("Shutting down HSQLDB: Done");
   }
   def run(): Unit = {
-    logger.debug("Starting " + hsqlServer.getProductName() + " " + hsqlServer.getProductVersion() + " with parameters???")
+    log.debug("Starting " + hsqlServer.getProductName() + " " + hsqlServer.getProductVersion() + " with parameters???")
     this.hsqlServer.start()
   }
 }

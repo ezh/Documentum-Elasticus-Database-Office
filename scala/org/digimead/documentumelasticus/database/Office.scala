@@ -72,8 +72,8 @@ import java.io.File
 import java.net.URL
 import java.util.Properties
 import org.slf4j.LoggerFactory
-import org.digimead.documentumelasticus.component.XBase
-import org.digimead.documentumelasticus.component.XBaseInfo
+import org.digimead.documentumelasticus.component.XBaseClass
+import org.digimead.documentumelasticus.component.XBaseObject
 import org.digimead.documentumelasticus.helper._
 import java.sql.DriverManager
 
@@ -86,7 +86,7 @@ class Office(val ctx: XComponentContext) extends ComponentBase
                                             with XGroupAPI
                                             with XDBFix
                                             with XDBUtils {
-  protected val logger = LoggerFactory.getLogger(this.getClass)
+  val log = LoggerFactory.getLogger(this.getClass)
   var componentSingleton = Office.componentSingleton
   val componentTitle = Office.componentTitle
   val componentDescription = Office.componentDescription
@@ -96,7 +96,7 @@ class Office(val ctx: XComponentContext) extends ComponentBase
   val componentDisabled = Office.componentDisabled
   private var aLocalPath: File = null // path to local folder
   initialize(Array()) // initialized by default
-  logger.info(componentName + " active")
+  log.info(componentName + " active")
   def show(): Unit = {
   }
   def hide(): Unit = {
@@ -141,28 +141,28 @@ class Office(val ctx: XComponentContext) extends ComponentBase
         Server.start(sprop)
       }
       Class.forName("org.hsqldb.jdbcDriver")
-      logger.info("connect to database " + dbURL)
+      log.info("connect to database " + dbURL)
       connection = DriverManager.getConnection(dbURL, "sa", "")
       fixDataSource(connection)
     } else {
-      logger.error("could not obtain datasource with URL " + locationURL.toString().replaceFirst("^file:/(?=[^/])","file:///"))
+      log.error("could not obtain datasource with URL " + locationURL.toString().replaceFirst("^file:/(?=[^/])","file:///"))
       false
     }
   }
   def save(): Boolean = {
-    logger.trace("save database")
+    log.trace("save database")
     val oDocStorable = O.I[XStorable](document)
     oDocStorable.store()
     true
   }
   def close(): Unit = {
-    logger.trace("close database \"" + aName + "\"")
+    log.trace("close database \"" + aName + "\"")
     // close connection
     if (connection != null && connection.isValid(5)) {
       if (connection.getAutoCommit()) {
-        logger.trace("database autocommit is ON")
+        log.trace("database autocommit is ON")
       } else {
-        logger.trace("database autocommit is OFF; commit")
+        log.trace("database autocommit is OFF; commit")
         connection.commit()
       }
       if (aLocalPath != null) {
@@ -178,15 +178,15 @@ class Office(val ctx: XComponentContext) extends ComponentBase
     val xStorable = O.I[XStorable](document)
     try {
       if (xModifiable != null && xModifiable.isModified()){
-        logger.trace("database document was modified")
+        log.trace("database document was modified")
         if (xStorable.hasLocation() && xStorable.isReadonly()) {
           xStorable.store()
-          logger.trace("database document has been stored")
+          log.trace("database document has been stored")
         }else{
           xModifiable.setModified(false)
         }
       } else {
-        logger.trace("database document was NOT modified")
+        log.trace("database document was NOT modified")
       }
       // Check supported functionality of the document (model or controller).
       val xModel: XModel = O.I[XModel](document).asInstanceOf[XModel]
@@ -194,10 +194,10 @@ class Office(val ctx: XComponentContext) extends ComponentBase
         // It is a full featured office document.
         // Try to use close mechanism instead of a hard dispose().
         // But maybe such service is not available on this model.
-        logger.trace("detect full featured office document")
+        log.trace("detect full featured office document")
         val xCloseable: XCloseable = O.I[XCloseable](xModel)
         if (xCloseable != null) {
-          logger.trace("detect XCloseable interface in document, close")
+          log.trace("detect XCloseable interface in document, close")
           try {
             // use close(boolean DeliverOwnership)
             // The boolean parameter DeliverOwnership tells objects vetoing the close process that they may
@@ -205,19 +205,19 @@ class Office(val ctx: XComponentContext) extends ComponentBase
             // Here we give up ownership. To be on the safe side, catch possible veto exception anyway.
             xCloseable.close(true)
           } catch {
-            case e: CloseVetoException => logger.warn("CloseVetoException")
+            case e: CloseVetoException => log.warn("CloseVetoException")
           }
         } else {
           // If close is not supported by this model - try to dispose it.
           // But if the model disagree with a reset request for the modify state
           // we shouldn't do so. Otherwhise some strange things can happen.
-          logger.trace("XCloseable interface is absent in document, dispose")
+          log.trace("XCloseable interface is absent in document, dispose")
           val xDisposeable: XComponent = O.I[XComponent](xModel)
           xDisposeable.dispose()
         }
       }
     } catch {
-      case e: DisposedException => logger.warn(e.getMessage(), e)
+      case e: DisposedException => log.warn(e.getMessage(), e)
     }
     document = null
   }
@@ -228,12 +228,12 @@ class Office(val ctx: XComponentContext) extends ComponentBase
       if (aName != null && aName.length > 0) {
         delete(aName, "")
       } else {
-        logger.trace("try to delete uninitialized database; action skip")
+        log.trace("try to delete uninitialized database; action skip")
       }
     }
   }
   def delete(sourceName: String, odbLocation: String): Unit = {
-    logger.trace("delete database with source name \"" + sourceName + "\" and location " + odbLocation)
+    log.trace("delete database with source name \"" + sourceName + "\" and location " + odbLocation)
     val locationURL = new URL(odbLocation)
     if (((sourceName.length > 0) && (sourceName == aName)) ||
         (locationURL.equals(aURL))) {
@@ -244,14 +244,14 @@ class Office(val ctx: XComponentContext) extends ComponentBase
     if (sourceName.length > 0) {
       val xNamingService = O.SI[XNamingService](mcf, "com.sun.star.sdb.DatabaseContext", ctx)
       if (O.I[XNameAccess](xNamingService).hasByName(sourceName)) {
-        logger.warn("revoke data source " + sourceName)
+        log.warn("revoke data source " + sourceName)
         xNamingService.revokeObject(sourceName)
       }
     }
     // rm odb if any
     val oSimpleFileAccess = O.SI[XSimpleFileAccess](mcf, "com.sun.star.ucb.SimpleFileAccess", ctx)
     if (oSimpleFileAccess.exists(locationURL.toString().replaceFirst("^file:/(?=[^/])","file:///"))) {
-      logger.warn("remove ODB file " + locationURL.toString().replaceFirst("^file:/(?=[^/])","file:///"))
+      log.warn("remove ODB file " + locationURL.toString().replaceFirst("^file:/(?=[^/])","file:///"))
       oSimpleFileAccess.kill(locationURL.toString().replaceFirst("^file:/(?=[^/])","file:///"))
     }
     // rm database directory if any
@@ -260,7 +260,7 @@ class Office(val ctx: XComponentContext) extends ComponentBase
       val dbName = dbFile.getName().substring(0, dbFile.getName().length - 4)
       val dbPath = new File(dbFile.getParent() + File.separator + "." + dbName)
       if (dbPath.exists()) {
-      logger.warn("remove database directory" + dbPath.toString)
+      log.warn("remove database directory" + dbPath.toString)
       def deleteFolder(folder: File): Unit = {
           val files = folder.listFiles
           if (files != null) {
@@ -290,7 +290,7 @@ class Office(val ctx: XComponentContext) extends ComponentBase
   // - implement trait XInitialization -
   // -----------------------------------
   def initialize(args: Array[AnyRef]) = synchronized {
-    logger.info("initialize " + componentName)
+    log.info("initialize " + componentName)
     if (isInitialized())
       throw new RuntimeException("Initialization of " + componentName + " already done")
     Office.initialized = true
@@ -299,9 +299,9 @@ class Office(val ctx: XComponentContext) extends ComponentBase
   // - implement trait XComponent -
   // ------------------------------
   override def dispose(): Unit = synchronized {
-    logger.info("dispose " + componentName)
+    log.info("dispose " + componentName)
     if (!isInitialized()) {
-      logger.warn("dispose of " + componentName + " already done")
+      log.warn("dispose of " + componentName + " already done")
       return
     }
     close()
@@ -312,7 +312,7 @@ class Office(val ctx: XComponentContext) extends ComponentBase
   // - restricted methods -
   // -------------------
   protected def createDataBase(locationURL: java.net.URL): (XComponent, XDataSource, File) = {
-    logger.trace("create database with url \"" + locationURL.toString.replaceFirst("^file:/(?=[^/])","file:///") + "\"")
+    log.trace("create database with url \"" + locationURL.toString.replaceFirst("^file:/(?=[^/])","file:///") + "\"")
     if (locationURL.getProtocol() != "file")
       throw new RuntimeException("Incorrect database location " + locationURL.toString + ". Provide file:///... for automatic database creation")
     if (!locationURL.toString.toUpperCase.endsWith(".ODB"))
@@ -326,18 +326,18 @@ class Office(val ctx: XComponentContext) extends ComponentBase
       throw new RuntimeException("Database path \"" + dbPath.toString + "\" already exists")
     val oDesk = O.SI[XComponentLoader](mcf, "com.sun.star.frame.Desktop", ctx)
     // create a new blank (empty) office database file ... does NOT yet contain any connection info
-    logger.debug("create private:factory/sdatabase")
+    log.debug("create private:factory/sdatabase")
     val oDataFile = oDesk.loadComponentFromURL("private:factory/sdatabase", "_default", 0, Array[PropertyValue](new PropertyValue("Hidden", 0, true, PropertyState.DIRECT_VALUE)))
-    logger.debug("store private:factory/sdatabase")
+    log.debug("store private:factory/sdatabase")
     val oDocStorable = O.I[XStorable](oDataFile)
     oDocStorable.storeAsURL(locationURL.toString.replaceFirst("^file:/(?=[^/])","file:///"), Array[PropertyValue]())
-    logger.debug("retrieve datasource")
+    log.debug("retrieve datasource")
     Thread.sleep(1000) // BUG in office? hang, if too fast ;-)
     val oDataBase = O.I[XOfficeDatabaseDocument](oDataFile)
     val oDataSource = oDataBase.getDataSource()
     val oDataSourceProps = O.I[XPropertySet](oDataSource)
     // create HSQL database
-    logger.debug("create HSQL database")
+    log.debug("create HSQL database")
     if (!dbPath.mkdirs())
       throw new RuntimeException("mkdir failed \"" + dbPath.toString + "\"")
     // = = =  below is an example of a JDBC database engine = = =
@@ -359,17 +359,17 @@ class Office(val ctx: XComponentContext) extends ComponentBase
     var dbPath: File = null
     // try to obtain datasource from xNamingService
     try {
-      logger.trace("try to open registered datasource \"" + name + "\"")
+      log.trace("try to open registered datasource \"" + name + "\"")
       val oDataBase = O.I[XDocumentDataSource](xNamingService.getRegisteredObject(name))
       oDataFile = O.I[XComponent](oDataBase.getDatabaseDocument())
       oDataSource = O.I[XDataSource](oDataBase)
-      logger.info("datasource \"" + name + "\" found")
+      log.info("datasource \"" + name + "\" found")
     } catch {
-      case e => logger.info("datasource \"" + name + "\" not found")
+      case e => log.info("datasource \"" + name + "\" not found")
     }
     if (oDataSource == null) {
       // try to obtain datasource from ODB file
-      logger.trace("try to open unregistered datasource with url \"" + locationURL.toString.replaceFirst("^file:/(?=[^/])","file:///") + "\"")
+      log.trace("try to open unregistered datasource with url \"" + locationURL.toString.replaceFirst("^file:/(?=[^/])","file:///") + "\"")
       val oSimpleFileAccess = O.SI[XSimpleFileAccess](mcf, "com.sun.star.ucb.SimpleFileAccess", ctx)
       if (oSimpleFileAccess.exists(locationURL.toString().replaceFirst("^file:/(?=[^/])","file:///"))) {
         val oDesk = O.SI[XComponentLoader](mcf, "com.sun.star.frame.Desktop", ctx)
@@ -389,7 +389,7 @@ class Office(val ctx: XComponentContext) extends ComponentBase
           val tmpPath = new File(dbFile.getParent() + File.separator + "." + dbName)
           if (tmpPath.exists) {
             dbPath = tmpPath
-            logger.debug("find folder \"" + dbPath.toString() + "\" for local database; mask database as local")
+            log.debug("find folder \"" + dbPath.toString() + "\" for local database; mask database as local")
           }
         }
       }
@@ -398,9 +398,9 @@ class Office(val ctx: XComponentContext) extends ComponentBase
   }
 }
 
-object Office extends XBaseInfo {
-  private val logger = LoggerFactory.getLogger(this.getClass.getName)
-  var componentSingleton: Option[XBase] = None
+object Office extends XBaseObject {
+  private val log = LoggerFactory.getLogger(this.getClass.getName)
+  var componentSingleton: Option[XBaseClass] = None
   val componentTitle = "Documentum Elasticus Storage"
   val componentDescription = "local file storage component"
   val componentURL = "http://www."
@@ -408,7 +408,7 @@ object Office extends XBaseInfo {
   val componentServices: Array[String] = Array(componentName)
   val componentDisabled = false
   var initialized: Boolean = false
-  logger.info(componentName + " active")
+  log.info(componentName + " active")
   /**
    * @param args the command line arguments
    */
@@ -435,7 +435,7 @@ object Office extends XBaseInfo {
         rs = statement.executeQuery() // reexec
         rs.next()
       } else {
-        logger.debug("update exists storage \"" + storage.getName()+ "\"")
+        log.debug("update exists storage \"" + storage.getName()+ "\"")
       }
       val row = O.I[XRow](rs)
       storage.aID = row.getInt(1)
@@ -493,7 +493,7 @@ object Office extends XBaseInfo {
   //      folder.setID(row.getInt(1))
         return true
       } else {
-        logger.debug("update exists folder \"" + folder.getPath()+ "\"")
+        log.debug("update exists folder \"" + folder.getPath()+ "\"")
       }
       // merge data from select
       val row = O.I[XRow](rs)
@@ -561,7 +561,7 @@ object Office extends XBaseInfo {
       //  file.setID(row.getInt(1))
         return true
       } else {
-        logger.debug("update exists file \"" + file.getPath()+ "\"")
+        log.debug("update exists file \"" + file.getPath()+ "\"")
       }
       // merge data from select
       val row = O.I[XRow](rs)
@@ -600,7 +600,7 @@ object Office extends XBaseInfo {
   }
   // ---------------------------------------------------------------------------
   private def createDataBase(name: String, locationURL: java.net.URL, interactive: Boolean): (XComponent, XDataSource) = {
-    logger.trace("create datasource for \"" + name + "\" with url \"" + locationURL.toString.replaceFirst("^file:/(?=[^/])","file:///") + "\"")
+    log.trace("create datasource for \"" + name + "\" with url \"" + locationURL.toString.replaceFirst("^file:/(?=[^/])","file:///") + "\"")
     val oDesk = O.SI[XComponentLoader](mcf, "com.sun.star.frame.Desktop", ctx)
     // create a new blank (empty) office database file ... does NOT yet contain any connection info
     val oDataFile = oDesk.loadComponentFromURL("private:factory/sdatabase", "_blank", 0, Array[PropertyValue]())
@@ -622,10 +622,10 @@ object Office extends XBaseInfo {
 // retrieve the DatabaseContext and get its com.sun.star.container.XNameAccess interface
     val xNamingService = O.SI[XNamingService](mcf, "com.sun.star.sdb.DatabaseContext", ctx);
     // register the new db name
-    logger.trace("register datasource for \"" + name + "\" with url \"" + locationURL.toString.replaceFirst("^file:/(?=[^/])","file:///") + "\"")
+    log.trace("register datasource for \"" + name + "\" with url \"" + locationURL.toString.replaceFirst("^file:/(?=[^/])","file:///") + "\"")
     // revoke the data source, if it previously existed
     if (O.I[XNameAccess](xNamingService).hasByName(name)) {
-      logger.warn("revoke old data source " + name)
+      log.warn("revoke old data source " + name)
       xNamingService.revokeObject(name)
     }
     xNamingService.registerObject(name, oDataSource)
@@ -641,17 +641,17 @@ object Office extends XBaseInfo {
     var oDataSource: XDataSource = null
     // try to obtain datasource from xNamingService
     try {
-      logger.trace("try to open registered datasource \"" + name + "\"")
+      log.trace("try to open registered datasource \"" + name + "\"")
       val oDataBase = O.I[XDocumentDataSource](xNamingService.getRegisteredObject(name))
       oDataFile = O.I[XComponent](oDataBase.getDatabaseDocument())
       oDataSource = O.I[XDataSource](oDataBase)
-      logger.info("datasource \"" + name + "\" found")
+      log.info("datasource \"" + name + "\" found")
     } catch {
-      case e => logger.info("datasource \"" + name + "\" not found")
+      case e => log.info("datasource \"" + name + "\" not found")
     }
     if (oDataSource == null) {
       // try to obtain datasource from ODB file
-      logger.trace("try to open unregistered datasource with url \"" + locationURL.toString.replaceFirst("^file:/(?=[^/])","file:///") + "\"")
+      log.trace("try to open unregistered datasource with url \"" + locationURL.toString.replaceFirst("^file:/(?=[^/])","file:///") + "\"")
       val oSimpleFileAccess = O.SI[XSimpleFileAccess](oSM, "com.sun.star.ucb.SimpleFileAccess", ctx)
       if (oSimpleFileAccess.exists(locationURL.toString().replaceFirst("^file:/(?=[^/])","file:///"))) {
         val oDesk = O.SI[XComponentLoader](oSM, "com.sun.star.frame.Desktop", ctx)
@@ -675,7 +675,7 @@ object Office extends XBaseInfo {
     true
   }
   private def createStorage(storage: XStorageUNO) {
-    logger.debug("create new storage \"" + storage.getName()+ "\"")
+    log.debug("create new storage \"" + storage.getName()+ "\"")
     val calendar = Calendar.getInstance()
 /*    if (storage.getUpdatedAt() == null)
       storage.setUpdatedAt(DT.toDateTime(calendar))
@@ -723,11 +723,11 @@ object Office extends XBaseInfo {
     try {
       statementIns.executeUpdate()
     } catch {
-      case e => logger.error("insert new storage failed: ", e)
+      case e => log.error("insert new storage failed: ", e)
     }*/
   }
   private def createFolder(folder: XFolderUNO) {
-    logger.debug("create new folder \"" + folder.getPath()+ "\"")
+    log.debug("create new folder \"" + folder.getPath()+ "\"")
     val calendar = Calendar.getInstance()
     if (folder.getUpdatedAt() == null)
       folder.setUpdatedAt(DT.toDateTime(calendar))
@@ -797,11 +797,11 @@ object Office extends XBaseInfo {
     try {
       statementIns.executeUpdate()
     } catch {
-      case e => logger.error("insert new folder failed: ", e)
+      case e => log.error("insert new folder failed: ", e)
     }
   }
   private def createFile(file: XFileUNO) {
-    logger.debug("create new file \"" + file.getPath()+ "\"")
+    log.debug("create new file \"" + file.getPath()+ "\"")
     val calendar = Calendar.getInstance()
     if (file.getUpdatedAt() == null)
       file.setUpdatedAt(DT.toDateTime(calendar))
@@ -869,7 +869,7 @@ object Office extends XBaseInfo {
     try {
       statementIns.executeUpdate()
     } catch {
-      case e => logger.error("insert new file failed: ", e)
+      case e => log.error("insert new file failed: ", e)
     }
   }
  */

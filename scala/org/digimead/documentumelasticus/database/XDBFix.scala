@@ -55,7 +55,7 @@ trait XDBFix extends XDBUtils {
     val statement = connection.createStatement()
     val md = connection.getMetaData()
 
-    logger.info("check database version")
+    log.info("check database version")
     /*
      * METADATA
      */
@@ -75,7 +75,7 @@ trait XDBFix extends XDBUtils {
      * VERSION
      */
     val version = selectRow(connection, "SELECT VALUE FROM METADATA WHERE KEY='VERSION'")(0).asInstanceOf[String]
-    logger.warn("database version: " + version)
+    log.warn("database version: " + version)
     /*
      * FIXES
      */
@@ -101,7 +101,7 @@ trait XDBFix extends XDBUtils {
     val sUserGroupTable = addTablePrefix("USERGROUP")
 
     val version = selectRow(connection, "SELECT VALUE FROM METADATA WHERE KEY='VERSION'")(0).asInstanceOf[String]
-    logger.info("update database from version " + version + " to 20110209")
+    log.info("update database from version " + version + " to 20110209")
     /*
      * STORAGE
      */
@@ -133,7 +133,7 @@ trait XDBFix extends XDBUtils {
       try {
         statement.executeUpdate(query)
       } catch {
-        case e => logger.error("error in SQL statement: " + query, e)
+        case e => log.error("error in SQL statement: " + query, e)
       }
     }
     /*
@@ -179,7 +179,7 @@ trait XDBFix extends XDBUtils {
       try {
         statement.executeUpdate(query)
       } catch {
-        case e => logger.error("error in SQL statement: " + query, e)
+        case e => log.error("error in SQL statement: " + query, e)
       }
     }
     /*
@@ -222,7 +222,7 @@ trait XDBFix extends XDBUtils {
       try {
         statement.executeUpdate(query)
       } catch {
-        case e => logger.error("error in SQL statement: " + query, e)
+        case e => log.error("error in SQL statement: " + query, e)
       }
     }
     /*
@@ -282,7 +282,7 @@ trait XDBFix extends XDBUtils {
       try {
         statement.executeUpdate(query)
       } catch {
-        case e => logger.error("error in SQL statement: " + query, e)
+        case e => log.error("error in SQL statement: " + query, e)
       }
     }
     /*
@@ -310,7 +310,7 @@ trait XDBFix extends XDBUtils {
       try {
         statement.executeUpdate(query)
       } catch {
-        case e => logger.error("error in SQL statement: " + query, e)
+        case e => log.error("error in SQL statement: " + query, e)
       }
     }
     if (!md.getTables(null, null, sUserGroupTable, Array("TABLE")).next()) {

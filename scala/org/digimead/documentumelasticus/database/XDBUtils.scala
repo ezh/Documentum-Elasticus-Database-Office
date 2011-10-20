@@ -53,7 +53,7 @@ import java.sql.Types
 import org.slf4j.Logger
 
 trait XDBUtils {
-  protected val logger: Logger
+  protected val log: Logger
   def addTablePrefix(sBaseName: String): String = {
     //var sReturn = "" //sTablePrefix
 //    if (0 < sTablePrefix.length())
@@ -63,10 +63,10 @@ trait XDBUtils {
   }
   def createTable(connection: Connection, sCreateStatement: String, sTableName: String): Boolean = {
     if (!executeStatement(connection, sCreateStatement)) {
-      logger.error("could not create the table " + sTableName)
+      log.error("could not create the table " + sTableName)
       return false
     }
-    logger.debug("create table \"" + sTableName + "\"")
+    log.debug("create table \"" + sTableName + "\"")
     true
   }
   def executeStatement(connection: Connection, sStatement: String): Boolean = {
@@ -75,7 +75,7 @@ trait XDBUtils {
       xStatement.execute(sStatement);
     } catch {
       case e: SQLException => {
-          logger.error("statement failed: " + sStatement, e)
+          log.error("statement failed: " + sStatement, e)
           xStatement.close()
           return false
       }
